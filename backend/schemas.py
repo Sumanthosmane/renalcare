@@ -81,6 +81,7 @@ class WaterIntakeResponse(BaseModel):
     patient_id: str
     amount_ml: float
     time: Optional[str]
+    notes: Optional[str] = None
     date: datetime
     created_at: datetime
     

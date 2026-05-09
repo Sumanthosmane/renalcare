@@ -328,6 +328,38 @@ def get_water_history(
     }
 
 
+@app.delete("/api/water-intake/{patient_id}/reset")
+def reset_water_intake(
+    patient_id: str,
+    date: str = None,
+    db: Session = Depends(get_db)
+):
+    """Reset/delete all water intake entries for a specific date"""
+    patient = db.query(Patient).filter(Patient.id == patient_id).first()
+    if not patient:
+        raise HTTPException(status_code=404, detail="Patient not found")
+    
+    # Parse date
+    if date:
+        target_date = datetime.strptime(date, "%Y-%m-%d").date()
+    else:
+        target_date = datetime.utcnow().date()
+    
+    # Delete all entries for this date
+    deleted_count = db.query(WaterIntake).filter(
+        WaterIntake.patient_id == patient_id,
+        func.date(WaterIntake.date) == target_date
+    ).delete()
+    
+    db.commit()
+    
+    return {
+        "success": True,
+        "message": f"Deleted {deleted_count} water intake entries for {target_date.isoformat()}",
+        "deleted_count": deleted_count
+    }
+
+
 # ============= Meal Logging Endpoints =============
 
 @app.post("/api/meals", response_model=MealLogResponse)

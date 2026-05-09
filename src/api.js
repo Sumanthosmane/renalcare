@@ -191,6 +191,26 @@ export const getWaterHistory = async (patientId, days = 7) => {
   }
 };
 
+export const resetWaterIntakeForDay = async (patientId, date = null) => {
+  try {
+    let url = `${API_BASE_URL}/water-intake/${patientId}/reset`;
+    if (date) {
+      url += `?date=${date}`;
+    }
+    const response = await fetch(url, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    if (!response.ok) {
+      throw new Error(`API Error: ${response.status} - ${response.statusText}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Error resetting water intake:', error);
+    throw error;
+  }
+};
+
 // ============= Meals =============
 
 export const logMeal = async (mealData) => {
