@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, useAnimation } from 'framer-motion';
 import { Upload, Droplet, TrendingDown, Activity, AlertCircle, Check, Calendar, Award } from 'lucide-react';
+import ImageUploadComponent from './components/ImageUploadComponent';
+import WaterIntakeComponent from './components/WaterIntakeComponent';
 
 export default function App() {
   const [hydration, setHydration] = useState(0);
@@ -8,6 +10,7 @@ export default function App() {
   const [isDragging, setIsDragging] = useState(false);
   const [uploadedFile, setUploadedFile] = useState(null);
   const [stoneComposition, setStoneComposition] = useState('calcium-oxalate');
+  const [activeTab, setActiveTab] = useState('dashboard'); // NEW: Tab navigation
 
   // Animate hydration on mount
   useEffect(() => {
@@ -101,18 +104,19 @@ export default function App() {
 
           <nav className="space-y-2">
             {[
-              { icon: Activity, label: 'Dashboard', active: true },
-              { icon: Upload, label: 'AI Scan Analysis' },
-              { icon: Droplet, label: 'Hydration Tracker' },
-              { icon: TrendingDown, label: 'Risk Insights' },
-              { icon: Calendar, label: 'Appointments' },
-              { icon: Award, label: 'Health Goals' },
+              { id: 'dashboard', icon: Activity, label: 'Dashboard', active: true },
+              { id: 'scan', icon: Upload, label: 'AI Scan Analysis' },
+              { id: 'hydration', icon: Droplet, label: 'Hydration Tracker' },
+              { id: 'risk', icon: TrendingDown, label: 'Risk Insights' },
+              { id: 'appointments', icon: Calendar, label: 'Appointments' },
+              { id: 'goals', icon: Award, label: 'Health Goals' },
             ].map((item, idx) => (
               <motion.button
                 key={idx}
                 whileHover={{ x: 4, backgroundColor: 'rgba(59, 130, 246, 0.05)' }}
+                onClick={() => setActiveTab(item.id)}
                 className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all ${
-                  item.active 
+                  activeTab === item.id
                     ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-lg shadow-blue-200' 
                     : 'text-slate-600 hover:text-blue-600'
                 }`}
@@ -149,6 +153,20 @@ export default function App() {
           animate="visible"
           className="max-w-7xl mx-auto space-y-8"
         >
+          {/* CONDITIONAL: Show based on active tab */}
+          {activeTab !== 'dashboard' && (
+            <motion.div variants={itemVariants}>
+              {activeTab === 'scan' && <ImageUploadComponent patientId="patient_demo_001" />}
+              {activeTab === 'hydration' && <WaterIntakeComponent patientId="patient_demo_001" />}
+              {activeTab === 'risk' && <div className="text-center text-slate-600 py-12"><p>Risk Insights coming soon</p></div>}
+              {activeTab === 'appointments' && <div className="text-center text-slate-600 py-12"><p>Appointments coming soon</p></div>}
+              {activeTab === 'goals' && <div className="text-center text-slate-600 py-12"><p>Health Goals coming soon</p></div>}
+            </motion.div>
+          )}
+
+          {/* MAIN DASHBOARD */}
+          {activeTab === 'dashboard' && (
+            <>
           {/* Header/Hero Section */}
           <motion.div variants={itemVariants} className="mb-12">
             <motion.h2 
@@ -502,6 +520,8 @@ export default function App() {
               </button>
             </div>
           </motion.div>
+            </>
+          )}
         </motion.div>
       </div>
     </div>

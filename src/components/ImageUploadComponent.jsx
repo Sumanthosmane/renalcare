@@ -1,0 +1,254 @@
+import React, { useState } from 'react';
+import { Upload, X, AlertCircle, CheckCircle, Loader } from 'lucide-react';
+import { uploadScan, getPatient } from '../api';
+
+export default function ImageUploadComponent({ patientId = 'patient_demo_001' }) {
+  const [isDragging, setIsDragging] = useState(false);
+  const [file, setFile] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState(null);
+  const [error, setError] = useState(null);
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const droppedFile = e.dataTransfer.files[0];
+    if (droppedFile && droppedFile.type.startsWith('image/')) {
+      setFile(droppedFile);
+      setError(null);
+    } else {
+      setError('Please drop an image file');
+    }
+  };
+
+  const handleFileSelect = (e) => {
+    const selectedFile = e.target.files[0];
+    if (selectedFile && selectedFile.type.startsWith('image/')) {
+      setFile(selectedFile);
+      setError(null);
+    } else {
+      setError('Please select an image file');
+    }
+  };
+
+  const handleUpload = async () => {
+    if (!file) {
+      setError('Please select a file first');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    setResult(null);
+
+    try {
+      console.log('Uploading file:', file.name, 'for patient:', patientId);
+      const response = await uploadScan(file, patientId, 'unknown');
+      console.log('Upload response:', response);
+      
+      if (response && response.stone_size_mm !== undefined) {
+        setResult(response);
+        console.log('Analysis successful:', response);
+      } else {
+        throw new Error('Invalid response format from server');
+      }
+    } catch (err) {
+      console.error('Upload error:', err);
+      setError(err.message || 'Failed to upload scan. Make sure backend is running on port 8001');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const removeFile = () => {
+    setFile(null);
+    setResult(null);
+    setError(null);
+  };
+
+  return (
+    <div className="w-full max-w-2xl mx-auto p-6 bg-white rounded-2xl shadow-lg border border-slate-200">
+      <div className="flex items-center gap-3 mb-6">
+        <Upload className="w-6 h-6 text-blue-600" />
+        <h2 className="text-2xl font-bold text-slate-800">Kidney Stone Scan Analysis</h2>
+      </div>
+
+      {/* Upload Area */}
+      {!result && (
+        <>
+          <div
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            className={`relative border-2 border-dashed rounded-xl p-12 text-center transition-all cursor-pointer ${
+              isDragging
+                ? 'border-blue-500 bg-blue-50'
+                : 'border-slate-300 bg-slate-50 hover:bg-slate-100'
+            }`}
+          >
+            <input
+              type="file"
+              id="fileInput"
+              accept="image/*"
+              onChange={handleFileSelect}
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+            />
+            <label htmlFor="fileInput" className="absolute inset-0 w-full h-full flex flex-col items-center justify-center cursor-pointer">
+              <div className="flex flex-col items-center gap-2">
+                <Upload className={`w-12 h-12 ${isDragging ? 'text-blue-600' : 'text-slate-400'}`} />
+                <p className="text-lg font-semibold text-slate-700">
+                  {isDragging ? 'Drop your scan here' : 'Drag & drop your kidney scan'}
+                </p>
+                <p className="text-sm text-slate-500">or click to select a file</p>
+                <p className="text-xs text-slate-400 mt-2">
+                  Supported: JPG, PNG, DICOM (up to 10MB)
+                </p>
+              </div>
+            </label>
+          </div>
+
+          {/* File Preview */}
+          {file && (
+            <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <img
+                    src={URL.createObjectURL(file)}
+                    alt="preview"
+                    className="w-16 h-16 object-cover rounded-lg"
+                  />
+                  <div>
+                    <p className="font-semibold text-slate-800">{file.name}</p>
+                    <p className="text-sm text-slate-600">
+                      {(file.size / 1024 / 1024).toFixed(2)} MB
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={removeFile}
+                  className="p-2 hover:bg-blue-100 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 text-slate-600" />
+                </button>
+              </div>
+
+              {/* Upload Button */}
+              <button
+                onClick={handleUpload}
+                disabled={loading}
+                className={`w-full mt-4 py-3 px-4 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ${
+                  loading
+                    ? 'bg-slate-400 text-white cursor-not-allowed'
+                    : 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
+                }`}
+              >
+                {loading ? (
+                  <>
+                    <Loader className="w-5 h-5 animate-spin" />
+                    Analyzing...
+                  </>
+                ) : (
+                  'Analyze Scan'
+                )}
+              </button>
+            </div>
+          )}
+
+          {/* Error */}
+          {error && (
+            <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+              <p className="text-sm text-red-700">{error}</p>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Results */}
+      {result && (
+        <div className="mt-6 space-y-4">
+          <div className="p-6 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-xl">
+            <div className="flex items-start gap-3">
+              <CheckCircle className="w-8 h-8 text-green-600 flex-shrink-0 mt-1" />
+              <div className="flex-1">
+                <h3 className="font-bold text-lg text-green-900 mb-3">
+                  Analysis Complete ✓
+                </h3>
+
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Stone Size */}
+                  <div className="bg-white rounded-lg p-4 border border-green-100">
+                    <p className="text-sm text-slate-600 font-medium">Stone Size</p>
+                    <p className="text-3xl font-bold text-blue-600 mt-2">
+                      {result.stone_size_mm?.toFixed(2) || 'N/A'} mm
+                    </p>
+                  </div>
+
+                  {/* Severity */}
+                  <div className="bg-white rounded-lg p-4 border border-green-100">
+                    <p className="text-sm text-slate-600 font-medium">Severity</p>
+                    <div className="mt-2">
+                      <span className={`inline-block px-3 py-1 rounded-full font-semibold text-sm ${
+                        result.severity === 'Severe'
+                          ? 'bg-red-100 text-red-800'
+                          : result.severity === 'Moderate'
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : 'bg-green-100 text-green-800'
+                      }`}>
+                        {result.severity || 'N/A'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Location */}
+                  <div className="bg-white rounded-lg p-4 border border-green-100">
+                    <p className="text-sm text-slate-600 font-medium">Location</p>
+                    <p className="text-lg font-bold text-slate-800 mt-2">
+                      {result.stone_location || 'N/A'}
+                    </p>
+                  </div>
+
+                  {/* Confidence */}
+                  <div className="bg-white rounded-lg p-4 border border-green-100">
+                    <p className="text-sm text-slate-600 font-medium">Confidence</p>
+                    <p className="text-lg font-bold text-slate-800 mt-2">
+                      {((result.confidence || 0) * 100).toFixed(1)}%
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex gap-3">
+            <button
+              onClick={removeFile}
+              className="flex-1 py-3 px-4 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+            >
+              Analyze Another Scan
+            </button>
+            <button
+              onClick={() => {
+                setResult(null);
+                window.location.href = '#hydration';
+              }}
+              className="flex-1 py-3 px-4 bg-slate-200 text-slate-800 rounded-lg font-semibold hover:bg-slate-300 transition-colors"
+            >
+              Continue to Hydration
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
